@@ -291,11 +291,13 @@ class NMT(nn.Module):
         return combined_outputs
 
 
-    def step(self, Ybar_t: torch.Tensor,
+    def step(
+            self, Ybar_t: torch.Tensor,
             dec_state: Tuple[torch.Tensor, torch.Tensor],
             enc_hiddens: torch.Tensor,
             enc_hiddens_proj: torch.Tensor,
-            enc_masks: torch.Tensor) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
+            enc_masks: torch.Tensor
+        ) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
         """ Compute one forward step of the LSTM decoder, including the attention computation.
 
         @param Ybar_t (Tensor): Concatenated Tensor of [Y_t o_prev], with shape (b, e + h). The input for the decoder,
@@ -321,7 +323,7 @@ class NMT(nn.Module):
         combined_output = None
 
         ### TODO:
-        ###     1. Apply the decoder to `Ybar_t` and `dec_state`to obtain the new dec_state.
+        ###     1. Apply the decoder to `Ybar_t` and `dec_state` to obtain the new dec_state.
         ###     2. Split dec_state into its two parts (dec_hidden, dec_cell)
         ###     3. Compute the attention scores e_t, a Tensor shape (b, src_len).
         ###        Note: b = batch_size, src_len = maximum source length, h = hidden size.
@@ -343,6 +345,11 @@ class NMT(nn.Module):
         ###         https://pytorch.org/docs/stable/generated/torch.squeeze.html#torch-squeeze
 
         ### START CODE HERE (~3 Lines)
+        dec_state = self.decoder(Ybar_t, dec_state)
+        dec_hidden, dec_cell = dec_state
+        e_t = torch.bmm(
+            dec_hidden.unsqueeze(1), enc_hiddens_proj.transpose(1, 2)
+        ).squeeze(1)
         ### END CODE HERE
 
         # Set e_t to -inf where enc_masks has 1
