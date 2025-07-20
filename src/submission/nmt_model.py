@@ -204,8 +204,11 @@ class NMT(nn.Module):
         return enc_hiddens, dec_init_state
 
 
-    def decode(self, enc_hiddens: torch.Tensor, enc_masks: torch.Tensor,
-                dec_init_state: Tuple[torch.Tensor, torch.Tensor], target_padded: torch.Tensor) -> torch.Tensor:
+    def decode(
+        self,
+        enc_hiddens: torch.Tensor, enc_masks: torch.Tensor,
+        dec_init_state: Tuple[torch.Tensor, torch.Tensor], target_padded: torch.Tensor
+    ) -> torch.Tensor:
         """Compute combined output vectors for a batch.
 
         @param enc_hiddens (Tensor): Hidden states (b, src_len, h*2), where
@@ -267,6 +270,22 @@ class NMT(nn.Module):
         ###     Tensor Stacking:
         ###         https://pytorch.org/docs/stable/generated/torch.stack.html#torch-stack
         ### START CODE HERE (~9 Lines)
+        enc_hiddens_proj = self.att_projection(enc_hiddens)
+        Y = self.model_embeddings.target(target_padded)  # (tgt_len, b, e)
+
+        # Iterate over words in parallel
+        for Y_t in torch.split(Y, split_size_or_sections=1, dim=0):
+            Y_t = Y_t.squeeze(0)  # (batch, embed_size)
+            Ybar_t = torch.cat([Y_t, o_prev], dim=1)
+
+            # Run step
+            dec_state, o_t, _ = self.step(
+                Ybar_t, dec_state, enc_hiddens, enc_hiddens_proj, enc_masks
+            )
+
+            # Save combined output and update o_prev
+            combined_outputs.append(o_t)
+            o_prev = o_t
         ### END CODE HERE
 
         return combined_outputs
