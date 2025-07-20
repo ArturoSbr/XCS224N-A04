@@ -286,6 +286,7 @@ class NMT(nn.Module):
             # Save combined output and update o_prev
             combined_outputs.append(o_t)
             o_prev = o_t
+        combined_outputs = torch.stack(combined_outputs)
         ### END CODE HERE
 
         return combined_outputs
@@ -387,7 +388,7 @@ class NMT(nn.Module):
         a_t = torch.bmm(alpha_t.unsqueeze(1), enc_hiddens).squeeze(1)
         U_t = torch.cat([dec_hidden, a_t], dim=1)
         V_t = self.combined_output_projection(U_t)
-        O_t = self.dropout(nn.Tanh(V_t))
+        O_t = self.dropout(torch.tanh(V_t))
         ### END CODE HERE
 
         combined_output = O_t
