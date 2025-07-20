@@ -136,13 +136,16 @@ class NMT(nn.Module):
             Additionally, take the final states of the encoder and project them to obtain initial states for decoder.
 
         @param source_padded (Tensor): Tensor of padded source sentences with shape (src_len, b), where
-                                        b = batch_size, src_len = maximum source sentence length. Note that
-                                       these have already been sorted in order of longest to shortest sentence.
+            b = batch_size, src_len = maximum source sentence length. Note that
+            these have already been sorted in order of longest to shortest sentence.
+
         @param source_lengths (List[int]): List of actual lengths for each of the source sentences in the batch
+
         @returns enc_hiddens (Tensor): Tensor of hidden units with shape (b, src_len, h*2), where
-                                        b = batch size, src_len = maximum source sentence length, h = hidden size.
+            b = batch size, src_len = maximum source sentence length, h = hidden size.
+    
         @returns dec_init_state (tuple(Tensor, Tensor)): Tuple of tensors representing the decoder's initial
-                                                hidden state and cell.
+            hidden state and cell.
         """
         enc_hiddens, dec_init_state = None, None
 
@@ -177,6 +180,25 @@ class NMT(nn.Module):
         ###     Tensor Permute:
         ###         https://pytorch.org/docs/stable/generated/torch.permute.html#torch.permute
         ### START CODE HERE (~ 8 Lines)
+        # 1. X
+        X = pack_padded_sequence(
+            input=self.model_embeddings.source(source_padded),
+            lengths=source_lengths
+        )
+
+        # 2. pass X to encoder
+        enc_hiddens, (last_hidden, last_cell) = self.encoder(X)
+        enc_hiddens, _ = pad_packed_sequence(enc_hiddens)  # Returns tuple
+        enc_hiddens = enc_hiddens.permute(1, 0, 2)  # Swap first two of src_len, b, h*2
+
+        # 3. dec_init_state
+        init_decoder_hidden = self.h_projection(
+            torch.cat(tensors=(last_hidden[0], last_hidden[1]), dim=1)
+        )
+        init_decoder_cell = self.c_projection(
+            torch.cat(tensors=(last_cell[0], last_cell[1]), dim=1)
+        )
+        dec_init_state = init_decoder_hidden, init_decoder_cell
         ### END CODE HERE
 
         return enc_hiddens, dec_init_state
